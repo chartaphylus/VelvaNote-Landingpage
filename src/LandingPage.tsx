@@ -53,7 +53,7 @@ export default function LandingPage() {
           </h1>
           
           <p className="text-lg sm:text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto leading-relaxed mb-8 md:mb-10 font-light px-2">
-            A beautiful, Notion-inspired workspace for your mind. Combine rich text notes, kanban boards, tasks, and calendars into one seamless Android experience.
+            A sophisticated workspace designed for your creativity. Organize notes, tasks, and collaborative folders in one elegant Android app. Kickstart your flow with ready-to-use templates and instant biometric access.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto px-4 sm:px-0">
