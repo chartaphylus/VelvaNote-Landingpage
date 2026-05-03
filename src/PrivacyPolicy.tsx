@@ -88,7 +88,7 @@ export default function PrivacyPolicy() {
             </p>
           </section>
         </div>
-        
+
         <div className="text-center mt-12 text-slate-500 text-sm">
           &copy; {new Date().getFullYear()} Velva Note. All rights reserved.
         </div>

@@ -71,48 +71,46 @@ export default function SharedItem() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center pt-12 pb-24 px-6">
+    <div className="min-h-screen bg-[#0f172a] flex flex-col items-center pt-8 sm:pt-12 pb-20 sm:pb-24 px-4 sm:px-6">
       <div className="w-full max-w-3xl">
-        <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-800">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 mb-8 pb-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-blue-500/10 object-cover" />
-            <span className="font-semibold text-slate-300 tracking-wide text-lg">Velva Note</span>
+            <img src={logo} alt="Logo" className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-lg shadow-blue-500/10 object-cover" />
+            <span className="font-semibold text-slate-300 tracking-wide text-base sm:text-lg">Velva Note</span>
           </div>
           
           <button 
             onClick={handleOpenApp}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-6 rounded-full transition-colors shadow-lg shadow-blue-600/20"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-8 rounded-full transition-colors shadow-lg shadow-blue-600/20 text-sm sm:text-base"
           >
             Open in App
           </button>
         </div>
 
-        <h1 className="text-4xl font-bold text-white mb-8">{item.title}</h1>
+        <h1 className="text-2xl sm:text-4xl font-bold text-white mb-6 sm:mb-8 text-center sm:text-left">{item.title}</h1>
         
-        <div className="bg-[#1e293b] rounded-2xl p-8 border border-slate-700/50 shadow-xl">
+        <div className="bg-[#1e293b] rounded-xl sm:rounded-2xl p-5 sm:p-8 border border-slate-700/50 shadow-xl">
           {item.type === 'note' ? (
             <div className="prose prose-invert prose-slate max-w-none">
-              {/* Here you would parse the Quill Delta JSON into HTML. 
-                  For now, we just stringify or show a placeholder since Quill parsing in React requires a library */}
-              <p className="text-slate-300 leading-relaxed italic">
+              <p className="text-slate-300 leading-relaxed italic text-sm sm:text-base">
                 Note content is visible inside the Velva Note app. Click 'Open in App' to view the full formatting.
               </p>
             </div>
           ) : item.type === 'todo' ? (
-            <div className="space-y-3">
+            <div className="space-y-3 sm:space-y-4">
               {(item.content?.todos || []).map((todo: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center ${todo.isDone ? 'bg-blue-500 border-blue-500' : 'border-slate-500'}`}>
+                <div key={idx} className="flex items-start sm:items-center gap-3">
+                  <div className={`mt-1 sm:mt-0 shrink-0 w-5 h-5 rounded border flex items-center justify-center ${todo.isDone ? 'bg-blue-500 border-blue-500' : 'border-slate-500'}`}>
                     {todo.isDone && <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
                   </div>
-                  <span className={`text-lg ${todo.isDone ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                  <span className={`text-base sm:text-lg ${todo.isDone ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
                     {todo.text}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-slate-400 italic">This item type ({item.type}) requires the full app to view properly.</div>
+            <div className="text-slate-400 italic text-sm sm:text-base">This item type ({item.type}) requires the full app to view properly.</div>
           )}
         </div>
       </div>
