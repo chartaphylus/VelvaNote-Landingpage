@@ -3,6 +3,45 @@ import { useParams } from 'react-router-dom';
 import { supabase } from './supabase';
 import logo from './assets/Logo.png';
 
+const renderQuillDelta = (content: any) => {
+  if (!content) return <p className="text-slate-400 italic">No content</p>;
+  
+  let delta = content;
+  if (typeof content === 'string') {
+    try { delta = JSON.parse(content); } catch (e) { return <p className="text-slate-300">{content}</p>; }
+  }
+  
+  if (!Array.isArray(delta)) return <p className="text-slate-400 italic">Unsupported content format</p>;
+
+  return (
+    <div className="whitespace-pre-wrap text-slate-300 text-base leading-relaxed font-sans">
+      {delta.map((op, idx) => {
+        if (typeof op.insert === 'string') {
+          let className = '';
+          if (op.attributes) {
+            if (op.attributes.bold) className += 'font-bold text-white ';
+            if (op.attributes.italic) className += 'italic ';
+            if (op.attributes.underline) className += 'underline ';
+            if (op.attributes.strike) className += 'line-through ';
+          }
+          return <span key={idx} className={className}>{op.insert}</span>;
+        } else if (op.insert && typeof op.insert === 'object') {
+           const type = Object.keys(op.insert)[0];
+           return (
+             <span key={idx} className="block my-4 p-4 bg-[#0f172a] rounded-lg border border-slate-700/50 text-sm text-slate-400">
+               <span className="flex items-center gap-3">
+                 <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 <span>[{type.toUpperCase()} ITEM] Open in Velva Note app to view this interactive content.</span>
+               </span>
+             </span>
+           );
+        }
+        return null;
+      })}
+    </div>
+  );
+};
+
 export default function SharedItem() {
   const { id } = useParams();
   const [item, setItem] = useState<any>(null);
@@ -92,9 +131,7 @@ export default function SharedItem() {
         <div className="bg-[#1e293b] rounded-xl sm:rounded-2xl p-5 sm:p-8 border border-slate-700/50 shadow-xl">
           {item.type === 'note' ? (
             <div className="prose prose-invert prose-slate max-w-none">
-              <p className="text-slate-300 leading-relaxed italic text-sm sm:text-base">
-                Note content is visible inside the Velva Note app. Click 'Open in App' to view the full formatting.
-              </p>
+              {renderQuillDelta(item.content)}
             </div>
           ) : item.type === 'todo' ? (
             <div className="space-y-3 sm:space-y-4">
