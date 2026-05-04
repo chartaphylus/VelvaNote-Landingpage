@@ -13,31 +13,177 @@ const renderQuillDelta = (content: any) => {
   
   if (!Array.isArray(delta)) return <p className="text-slate-400 italic">Unsupported content format</p>;
 
-  return (
-    <div className="whitespace-pre-wrap text-slate-300 text-base leading-relaxed font-sans">
-      {delta.map((op, idx) => {
-        if (typeof op.insert === 'string') {
-          let className = '';
-          if (op.attributes) {
-            if (op.attributes.bold) className += 'font-bold text-white ';
-            if (op.attributes.italic) className += 'italic ';
-            if (op.attributes.underline) className += 'underline ';
-            if (op.attributes.strike) className += 'line-through ';
-          }
-          return <span key={idx} className={className}>{op.insert}</span>;
-        } else if (op.insert && typeof op.insert === 'object') {
-           const type = Object.keys(op.insert)[0];
-           return (
-             <span key={idx} className="block my-4 p-4 bg-[#0f172a] rounded-lg border border-slate-700/50 text-sm text-slate-400">
-               <span className="flex items-center gap-3">
-                 <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                 <span>[{type.toUpperCase()} ITEM] Open in Velva Note app to view this interactive content.</span>
-               </span>
-             </span>
-           );
+  // Two-pass parser to group into lines
+  const lines: any[] = [];
+  let currentLine: any[] = [];
+  
+  delta.forEach((op: any) => {
+    if (typeof op.insert === 'string') {
+      const parts = op.insert.split('\n');
+      for (let i = 0; i < parts.length; i++) {
+        if (parts[i].length > 0) {
+          currentLine.push({ text: parts[i], attributes: op.attributes || {} });
         }
-        return null;
-      })}
+        if (i < parts.length - 1) { // It was a newline
+          lines.push({ ops: currentLine, attributes: op.attributes || {} });
+          currentLine = [];
+        }
+      }
+    } else if (op.insert && typeof op.insert === 'object') {
+      lines.push({ ops: [{ isEmbed: true, data: op.insert }], attributes: {} });
+    }
+  });
+  
+  if (currentLine.length > 0) {
+    lines.push({ ops: currentLine, attributes: {} });
+  }
+
+  // Render lines
+  let inList = false;
+
+  const renderElements = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const attrs = line.attributes;
+    
+    // Check if this line is part of a list
+    const isList = attrs.list;
+    if (isList && !inList) {
+      inList = true;
+      // We don't render the wrapper <ul> here to keep it simple, we just render the <li>
+    } else if (!isList && inList) {
+      inList = false;
+    }
+
+    const inlineContent = line.ops.map((op: any, idx: number) => {
+      if (op.isEmbed) {
+        const type = Object.keys(op.data)[0];
+        let payload: any = {};
+        try {
+          payload = typeof op.data[type] === 'string' ? JSON.parse(op.data[type]) : op.data[type];
+        } catch(e) {}
+
+        if (type === 'custom_code') {
+          return (
+            <div key={idx} className="my-4 rounded-lg overflow-hidden border border-slate-700 bg-[#1e293b]">
+              <div className="bg-[#0f172a] px-4 py-2 text-xs font-mono text-slate-400 border-b border-slate-700 flex justify-between">
+                <span>{payload.language?.toUpperCase() || 'CODE'}</span>
+              </div>
+              <pre className="p-4 overflow-x-auto text-sm text-slate-300 font-mono whitespace-pre">
+                {payload.code || ''}
+              </pre>
+            </div>
+          );
+        } else if (type === 'custom_table') {
+          const rows = payload.rows || [];
+          return (
+            <div key={idx} className="my-4 overflow-x-auto rounded-lg border border-slate-700">
+              <table className="w-full text-left text-sm text-slate-300 border-collapse">
+                <tbody>
+                  {rows.map((row: any[], rIdx: number) => (
+                    <tr key={rIdx} className="border-b border-slate-700/50 last:border-0 hover:bg-slate-800/30">
+                      {row.map((cell: string, cIdx: number) => (
+                        <td key={cIdx} className="px-4 py-3 border-r border-slate-700/50 last:border-0">{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        } else if (type === 'toggle') {
+          return (
+            <details key={idx} className="my-3 group bg-[#1e293b] rounded-lg border border-slate-700/50">
+              <summary className="px-4 py-3 font-semibold text-slate-200 cursor-pointer list-none flex items-center gap-2">
+                <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                {payload.title || 'Toggle'}
+              </summary>
+              <div className="px-4 pb-4 pt-1 ml-6 text-slate-300 whitespace-pre-wrap">
+                {payload.content || ''}
+              </div>
+            </details>
+          );
+        } else if (type === 'custom_audio') {
+          return (
+            <div key={idx} className="my-4 p-4 rounded-lg border border-slate-700 bg-[#1e293b] flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium text-slate-200 truncate">{payload.name || 'Audio File'}</p>
+                <p className="text-xs text-slate-500 mt-1">Listen in Velva Note app</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <span key={idx} className="block my-4 p-4 bg-[#0f172a] rounded-lg border border-slate-700/50 text-sm text-slate-400">
+            <span className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>[{type.toUpperCase()} ITEM] Open in Velva Note app to view this content.</span>
+            </span>
+          </span>
+        );
+      }
+
+      let className = '';
+      if (op.attributes.bold) className += 'font-bold text-white ';
+      if (op.attributes.italic) className += 'italic ';
+      if (op.attributes.underline) className += 'underline ';
+      if (op.attributes.strike) className += 'line-through ';
+      
+      return <span key={idx} className={className}>{op.text}</span>;
+    });
+
+    if (inlineContent.length === 0 && !isList && !attrs.header) {
+      renderElements.push(<div key={i} className="h-4"></div>);
+      continue;
+    }
+
+    if (attrs.header) {
+      if (attrs.header === 1) {
+        renderElements.push(<h1 key={i} className="text-3xl font-bold mt-6 mb-4 text-white">{inlineContent}</h1>);
+      } else if (attrs.header === 2) {
+        renderElements.push(<h2 key={i} className="text-2xl font-bold mt-5 mb-3 text-slate-100">{inlineContent}</h2>);
+      } else {
+        renderElements.push(<h3 key={i} className="text-xl font-bold mt-4 mb-2 text-slate-200">{inlineContent}</h3>);
+      }
+    } else if (isList) {
+      let bullet = '•';
+      let bulletClass = 'text-slate-400 mt-1';
+      
+      if (attrs.list === 'ordered') {
+        bullet = '1.'; // Displaying 1. for all ordered list items is standard simple fallback
+      } else if (attrs.list === 'checked') {
+        bullet = '☑';
+        bulletClass = 'text-blue-400 text-lg';
+      } else if (attrs.list === 'unchecked') {
+        bullet = '☐';
+        bulletClass = 'text-slate-400 text-lg';
+      }
+      
+      renderElements.push(
+        <div key={i} className="flex gap-3 my-1 ml-4 items-start">
+          <span className={`shrink-0 ${bulletClass}`}>{bullet}</span>
+          <div className={attrs.list === 'checked' ? 'line-through text-slate-500' : ''}>{inlineContent}</div>
+        </div>
+      );
+    } else if (attrs.blockquote) {
+      renderElements.push(
+        <blockquote key={i} className="border-l-4 border-blue-500 pl-4 py-1 my-3 text-slate-400 italic bg-slate-800/20 rounded-r">
+          {inlineContent}
+        </blockquote>
+      );
+    } else {
+      renderElements.push(<div key={i} className="my-1">{inlineContent}</div>);
+    }
+  }
+
+  return (
+    <div className="text-slate-300 text-base leading-relaxed font-sans">
+      {renderElements}
     </div>
   );
 };
@@ -128,9 +274,15 @@ export default function SharedItem() {
 
         <h1 className="text-2xl sm:text-4xl font-bold text-white mb-6 sm:mb-8 text-center sm:text-left">{item.title}</h1>
         
-        <div className="bg-[#1e293b] rounded-xl sm:rounded-2xl p-5 sm:p-8 border border-slate-700/50 shadow-xl">
+        <div className="bg-[#1e293b] rounded-xl sm:rounded-2xl p-5 sm:p-8 border border-slate-700/50 shadow-xl relative">
+          
+          <div className="absolute top-4 right-4 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+            <span className="text-xs font-medium text-slate-300">Read-Only Mode</span>
+          </div>
+
           {item.type === 'note' ? (
-            <div className="prose prose-invert prose-slate max-w-none">
+            <div className="prose prose-invert prose-slate max-w-none mt-6">
               {renderQuillDelta(item.content)}
             </div>
           ) : item.type === 'todo' ? (
